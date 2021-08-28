@@ -1,0 +1,23 @@
+[package]
+name = "mikino"
+version = "0.1.0"
+authors = ["Adrien Champion <adrien.champion@ocamlpro.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+description = "A simple induction and BMC engine"
+homepage = "https://github.com/AdrienChampion/mikino"
+repository = "https://github.com/AdrienChampion/mikino"
+keywords = ["smt", "satisfiability", "verification", "induction"]
+categories = ["science"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+force-color = []
+
+[dependencies]
+ansi_term = "^0.12"
+atty = "^0.2"
+clap = "^2.33"
+mikino_api = "0.1"
