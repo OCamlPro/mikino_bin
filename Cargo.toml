@@ -6,8 +6,8 @@ edition = "2018"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 description = "A simple induction and BMC engine"
-homepage = "https://github.com/AdrienChampion/mikino"
-repository = "https://github.com/AdrienChampion/mikino"
+homepage = "https://github.com/AdrienChampion/mikino_bin"
+repository = "https://github.com/AdrienChampion/mikino_bin"
 keywords = ["smt", "satisfiability", "verification", "induction"]
 categories = ["science"]
 
