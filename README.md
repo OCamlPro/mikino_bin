@@ -5,16 +5,40 @@ interesting tool for those interested in formal verification, especially SMT-bas
 > induction, recursion). It is a significantly simpler version of the now defunct [kino]
 > `k`-induction engine on transition systems.
 
+
+Contents:
+- [Installing](#installing)
+- [Basics](#basics)
 - [SMT Solver (Z3)](#smt-solver-z3)
-- [Building From Sources](#building-from-sources)
+- [Building From Source](#building-from-source)
 - [Transition Systems](#transition-systems)
 - [Dependencies](#dependencies)
 - [License](#license)
 
 
+# Installing
+
+Make sure Rust is installed and up to date.
+
+```bash
+> rustup update
+```
+
+Use cargo to install mikino.
+
+```bash
+> cargo install mikino
+```
+
+That's it. Alternatively, you can [build it from source](#building-from-source).
+
+
+# Basics
+
 You can run mikino in demo mode with `mikino demo demo.mkn`. This will write a heavily commented
 example system in `demo.mkn`. There is a discussion on transition systems
-[below](#transition-systems) that discusses this exact system.
+[below](#transition-systems) that goes into details on the input format, using this exact system as
+an example.
 
 Running `mikino help` is also probably a good idea.
 
@@ -32,7 +56,7 @@ you can download directly from the [Z3 release page]. You must either
     - `mikino --z3_cmd ./path/to/my_z3 ...` if `path/to/my_z3` is where the Z3 binary is.
 
 
-# Building From Sources
+# Building From Source
 
 ```bash
 > cargo build --release
