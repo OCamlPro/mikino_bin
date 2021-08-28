@@ -163,7 +163,7 @@ Mikino relies on the following stellar libraries:
 
 Mikino is distributed under the terms of both the MIT license and the Apache License (Version 2.0).
 
-See [LICENSE-APACHE](./LICENSE-APACHE) and [LICENSE-MIT](./LICENSE-MIT) for details.
+See [LICENSE-APACHE][apache] and [LICENSE-MIT][mit] for details.
 
 -------
 
@@ -177,3 +177,7 @@ Copyright © OCamlPro SAS
 (Z3's release page on github)
 [kino]: https://github.com/kino-mc/kino
 (kino on github)
+[apache]: https://github.com/AdrienChampion/mikino_bin/blob/master/LICENSE-APACHE
+(Apache 2.0 license on github)
+[mit]: https://github.com/AdrienChampion/mikino_bin/blob/master/LICENSE-MIT
+(MIT license on github)
