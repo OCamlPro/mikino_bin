@@ -165,6 +165,10 @@ Mikino is distributed under the terms of both the MIT license and the Apache Lic
 
 See [LICENSE-APACHE](./LICENSE-APACHE) and [LICENSE-MIT](./LICENSE-MIT) for details.
 
+-------
+
+Copyright © OCamlPro SAS
+
 [SMT solver]: https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
 (SMT on wikipedia)
 [Z3]: https://github.com/Z3Prover/z3/wiki
