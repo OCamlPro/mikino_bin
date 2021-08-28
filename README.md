@@ -6,7 +6,6 @@ interesting tool for those interested in formal verification, especially SMT-bas
 > `k`-induction engine on transition systems.
 
 ![crates.io](https://img.shields.io/crates/v/mikino.svg)
-![CI](https://github.com/AdrienChampion/mikino/workflows/rust/badge.svg)
 
 Contents:
 - [Installing](#installing)
