@@ -15,8 +15,7 @@ jobs:
         target: [
           x86_64-pc-windows-gnu,
           x86_64-unknown-linux-musl,
-          x86_64-apple-darwin,
-          aarch64-apple-darwin
+          x86_64-apple-darwin
         ]
     steps:
       - uses: actions/checkout@master
@@ -25,4 +24,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUSTTARGET: ${{ matrix.target }}
-          EXTRA_FILES: ["README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+          EXTRA_FILES: "README.md LICENSE-APACHE LICENSE-MIT"
