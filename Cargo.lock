@@ -139,7 +139,7 @@ checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 
 [[package]]
 name = "mikino"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ansi_term 0.12.1",
  "atty",
@@ -149,13 +149,10 @@ dependencies = [
 
 [[package]]
 name = "mikino_api"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d6a70b84243c26816b01a004a12871654f35e5eeb72875dc6fcb843e47225af"
+checksum = "2997e27c02eaa036656b5eec61ea438b1b5fb0e3781038d02ea8f0a3d1791272"
 dependencies = [
- "ansi_term 0.12.1",
- "atty",
- "clap",
  "error-chain",
  "num",
  "rsmt2",
