@@ -31,7 +31,8 @@ Use cargo to install mikino.
 > cargo install mikino
 ```
 
-That's it. Alternatively, you can [build it from source](#building-from-source).
+That's it. Alternatively, you can [build it from source](#building-from-source) or retrieve a
+binary from the [release page] directly.
 
 
 # Basics
@@ -182,3 +183,5 @@ Copyright © OCamlPro SAS
 (Apache 2.0 license on github)
 [mit]: https://github.com/AdrienChampion/mikino_bin/blob/master/LICENSE-MIT
 (MIT license on github)
+[release page]: https://github.com/OCamlPro/mikino_bin/releases
+(Mikino's release page on github)
