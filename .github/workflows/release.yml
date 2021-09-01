@@ -1,7 +1,9 @@
 # From https://github.com/rust-build/rust-build.test/blob/master/.github/workflows/build.yml
 name: release
 
-on: release
+on:
+  release:
+    types: [created, published]
 
 jobs:
   release:
