@@ -1,9 +1,7 @@
 # From https://github.com/rust-build/rust-build.test/blob/master/.github/workflows/build.yml
 name: release
 
-on:
-  release:
-    types: [created]
+on: release
 
 jobs:
   release:
@@ -12,11 +10,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        target: [
-          x86_64-pc-windows-gnu,
-          x86_64-unknown-linux-musl,
-          x86_64-apple-darwin
-        ]
+        target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin ]
     steps:
       - uses: actions/checkout@master
       - name: Compile and release
