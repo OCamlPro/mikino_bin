@@ -33,10 +33,10 @@ impl Mode {
     }
 
     /// Builds itself from top-level clap matches.
-    pub fn from_clap(matches: &Matches) -> Option<Mode> {
+    pub fn from_clap(smt_log: Option<String>, matches: &Matches) -> Option<Mode> {
         let modes = [cla::try_check, cla::try_bmc, cla::try_demo, cla::try_parse];
         for try_mode in &modes {
-            let maybe_res = try_mode(matches);
+            let maybe_res = try_mode(smt_log.clone(), matches);
             if maybe_res.is_some() {
                 return maybe_res;
             }
@@ -83,14 +83,14 @@ pub mod cla {
         })
     }
 
-    fn smt_log_arg() -> Arg {
+    pub fn smt_log_arg() -> Arg {
         Arg::with_name(arg::SMT_LOG_KEY)
             .help("Activates SMT logging in the directory specified")
             .long("smt_log")
             .short("l")
             .value_name("DIR")
     }
-    fn get_smt_log(matches: &Matches) -> Option<String> {
+    pub fn get_smt_log(matches: &Matches) -> Option<String> {
         matches.value_of(arg::SMT_LOG_KEY).map(String::from)
     }
 
@@ -123,11 +123,11 @@ pub mod cla {
                 sys_arg(),
             ])
     }
-    pub fn try_check(matches: &Matches) -> Option<Mode> {
+    pub fn try_check(smt_log: Option<String>, matches: &Matches) -> Option<Mode> {
         let matches = matches.subcommand_matches(mode::CHECK)?;
 
         let input = get_sys(matches);
-        let smt_log = get_smt_log(matches);
+        let smt_log = get_smt_log(matches).or(smt_log);
 
         let mut bmc = matches.is_present(arg::BMC_KEY);
         let bmc_max = get_bmc_max(matches, || bmc = true);
@@ -155,7 +155,7 @@ pub mod cla {
                     .required(true),
             )
     }
-    pub fn try_demo(matches: &Matches) -> Option<Mode> {
+    pub fn try_demo(_smt_log: Option<String>, matches: &Matches) -> Option<Mode> {
         let matches = matches.subcommand_matches(mode::DEMO)?;
         let target = matches
             .value_of(arg::DEMO_TGT_KEY)
@@ -173,10 +173,10 @@ pub mod cla {
             )
             .args(&[bmc_max_arg(), smt_log_arg(), sys_arg()])
     }
-    pub fn try_bmc(matches: &Matches) -> Option<Mode> {
+    pub fn try_bmc(smt_log: Option<String>, matches: &Matches) -> Option<Mode> {
         let matches = matches.subcommand_matches(mode::BMC)?;
         let bmc_max = get_bmc_max(matches, || ());
-        let smt_log = get_smt_log(matches);
+        let smt_log = get_smt_log(matches).or(smt_log);
         let input = get_sys(matches);
         let induction = false;
         let bmc = true;
@@ -195,7 +195,7 @@ pub mod cla {
             .about("Parses the input system and exits")
             .arg(sys_arg())
     }
-    pub fn try_parse(matches: &Matches) -> Option<Mode> {
+    pub fn try_parse(_smt_log: Option<String>, matches: &Matches) -> Option<Mode> {
         let matches = matches.subcommand_matches(mode::PARSE)?;
         let input = get_sys(matches);
         Some(Mode::Parse { input })
