@@ -101,6 +101,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
 name = "error-chain"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -139,20 +145,22 @@ checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 
 [[package]]
 name = "mikino"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "ansi_term 0.12.1",
  "atty",
  "clap",
+ "either",
  "mikino_api",
 ]
 
 [[package]]
 name = "mikino_api"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2997e27c02eaa036656b5eec61ea438b1b5fb0e3781038d02ea8f0a3d1791272"
+checksum = "f5bb2a12ad86a34f6bc1abd9f2d2390859515fe23e755af76a8dedee65568523"
 dependencies = [
+ "either",
  "error-chain",
  "num",
  "rsmt2",

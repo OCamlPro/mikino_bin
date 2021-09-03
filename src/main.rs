@@ -383,6 +383,12 @@ impl<'env> Check<'env> {
                 println!("  | {} = {}", self.bold.paint(var_str), cst)
             }
         }
+        if !cex.unexpected.is_empty() {
+            println!("  |=| Z3 produced the following unexpected values");
+            for (desc, val) in &cex.unexpected {
+                println!("  | {} = {}", self.red.paint(desc.to_string()), val);
+            }
+        }
         println!("  |=|");
         Ok(())
     }
@@ -457,6 +463,7 @@ impl Run {
                 Arg::with_name("QUIET")
                     .short("q")
                     .help("Quiet output, only shows the final result (/!\\ hides counterexamples)"),
+                mode::cla::smt_log_arg(),
             ])
             .subcommands(mode::Mode::subcommands())
             .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -470,6 +477,7 @@ impl Run {
             .value_of("Z3_CMD")
             .expect("argument with default value")
             .into();
+        let smt_log = mode::cla::get_smt_log(&matches);
         let verb = if quiet {
             0
         } else if verb > 4 {
@@ -478,7 +486,8 @@ impl Run {
             verb
         };
 
-        let mode = mode::Mode::from_clap(&matches).expect("[clap] could not recognize mode");
+        let mode =
+            mode::Mode::from_clap(smt_log, &matches).expect("[clap] could not recognize mode");
 
         Self {
             styles: Styles::new(color),
