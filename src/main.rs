@@ -2,6 +2,8 @@
 
 mikino_api::prelude!();
 
+use std::{collections::BTreeSet as Set, io::Write, ops::Deref};
+
 use check::{BaseRes, CheckRes, StepRes};
 use trans::Sys;
 
@@ -55,7 +57,7 @@ impl<'env> Check<'env> {
         let mut txt = String::new();
         file.read_to_string(&mut txt)?;
 
-        let sys = parse::Parser::new(&txt).sys()?;
+        let sys = parse::sys(&txt)?;
         if env.verb >= 3 {
             println!("|===| Parsing {}:", env.styles.green.paint("successful"));
             for line in sys.to_ml_string().lines() {
@@ -497,66 +499,14 @@ impl Run {
         }
     }
 
-    /// String representation of the demo system.
-    pub const DEMO_SYS: &'static str = include_str!("../rsc/demo.rs");
-
-    fn pretty_error(&self, e: &(dyn std::error::Error + 'static)) -> String {
-        if let Some(e) = e.downcast_ref::<Error>() {
-            match e.kind() {
-                ErrorKind::ParseErr(row, col, line, msg) => {
-                    let (row_str, col_str) = ((row + 1).to_string(), (col + 1).to_string());
-                    let offset = {
-                        let mut offset = 0;
-                        let mut cnt = 0;
-                        for c in line.chars() {
-                            if cnt < *col {
-                                offset += 1;
-                                cnt += c.len_utf8();
-                            } else {
-                                break;
-                            }
-                        }
-                        offset
-                    };
-                    let mut s = format!(
-                        "parse error at {}:{}\n{} |\n{} | {}",
-                        self.bold.paint(&row_str),
-                        self.bold.paint(&col_str),
-                        " ".repeat(row_str.len()),
-                        self.bold.paint(&row_str),
-                        line,
-                    );
-                    s.push_str(&format!(
-                        "\n{} | {}{} {}",
-                        " ".repeat(row_str.len()),
-                        " ".repeat(offset),
-                        self.red.paint("^~~~"),
-                        self.red.paint(msg),
-                    ));
-
-                    s
-                }
-                _ => e.to_string(),
-            }
-        } else {
-            e.to_string()
-        }
-    }
-
     /// Launches whatever the user told us to do.
     pub fn launch(&self) {
         if let Err(e) = self.run() {
             println!("|===| {}", self.red.paint("Error"));
-            let mut s = self.pretty_error(&e);
-
-            use std::error::Error;
-            let mut source = e.source();
-            while let Some(e) = source {
-                s = format!("{}\n{}", self.pretty_error(e), s);
-                source = e.source()
-            }
-            for line in s.lines() {
-                println!("| {}", line)
+            for e in e.into_iter() {
+                for line in e.pretty(&self.styles).lines() {
+                    println!("| {}", line);
+                }
             }
             println!("|===|");
         }
@@ -612,7 +562,7 @@ impl Run {
             .truncate(true)
             .open(target)
             .chain_err(|| format!("while opening file `{}` in write mode", target))?;
-        file.write(Self::DEMO_SYS.as_bytes())
+        file.write(mikino_api::DEMO.as_bytes())
             .chain_err(|| format!("while writing demo system to file `{}`", target))?;
         file.flush()
             .chain_err(|| format!("while writing demo system to file `{}`", target))?;
@@ -630,6 +580,21 @@ pub struct Styles {
     pub red: Style,
     /// Green style.
     pub green: Style,
+}
+impl mikino_api::prelude::Style for Styles {
+    type Styled = String;
+    fn bold(&self, s: &str) -> Self::Styled {
+        self.bold.paint(s).to_string()
+    }
+    fn red(&self, s: &str) -> Self::Styled {
+        self.red.paint(s).to_string()
+    }
+    fn green(&self, s: &str) -> Self::Styled {
+        self.green.paint(s).to_string()
+    }
+    fn under(&self, s: &str) -> Self::Styled {
+        self.under.paint(s).to_string()
+    }
 }
 impl Styles {
     /// Constructor, with colors activated.
