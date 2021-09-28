@@ -115,7 +115,7 @@ pub mod cla {
                 Arg::with_name(arg::BMC_KEY)
                     .help(
                         "Activates BMC (Bounded Model-Checking): \
-                        looks for a falsification for POs found to not be inductive",
+                        looks for a falsification for candidates found to not be inductive",
                     )
                     .long("bmc"),
                 bmc_max_arg(),

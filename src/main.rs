@@ -74,7 +74,7 @@ impl<'env> Check<'env> {
         })
     }
 
-    /// Attemps to prove the POs on a system.
+    /// Attemps to prove the candidates on a system.
     pub fn run(&self) -> Res<(BaseRes, StepRes)> {
         let base_res = self.base_check()?;
         let step_res = self.step_check()?;
@@ -83,15 +83,15 @@ impl<'env> Check<'env> {
 
         if base_res.has_falsifications() {
             println!(
-                "| - the following PO(s) are {} in the initial state(s)",
+                "| - the following candidate(s) are {} in the initial state(s)",
                 self.red.paint("falsifiable")
             );
-            for (po, _) in base_res.cexs.iter() {
-                println!("|   `{}`", self.red.paint(*po))
+            for (candidate, _) in base_res.cexs.iter() {
+                println!("|   `{}`", self.red.paint(*candidate))
             }
         } else {
             println!(
-                "| - all POs {} in the initial state(s)",
+                "| - all candidates {} in the initial state(s)",
                 self.green.paint("hold")
             );
         }
@@ -100,7 +100,7 @@ impl<'env> Check<'env> {
 
         if step_res.has_falsifications() {
             println!(
-                "| - the following PO(s) are {} (not preserved by the transition relation)",
+                "| - the following candidate(s) are {} (not preserved by the transition relation)",
                 self.red.paint("not inductive")
             );
             for (po, _) in step_res.cexs.iter() {
@@ -108,7 +108,7 @@ impl<'env> Check<'env> {
             }
         } else {
             println!(
-                "| - all POs are {} (preserved by the transition relation)",
+                "| - all candidates are {} (preserved by the transition relation)",
                 self.green.paint("inductive")
             );
         }
@@ -117,43 +117,45 @@ impl<'env> Check<'env> {
 
         if !base_res.has_falsifications() && !step_res.has_falsifications() {
             println!(
-                "| - system is {}, all reachable states verify the PO(s)",
+                "| - system is {}, all reachable states verify the candidate(s)",
                 self.green.paint("safe")
             )
         } else if base_res.has_falsifications() {
             println!(
-                "| - system is {}, some PO(s) are falsified in the initial state(s)",
+                "| - system is {}, some candidate(s) are falsified in the initial state(s)",
                 self.red.paint("unsafe")
             );
             if self.env.verb == 0 {
                 println!(
                     "|   (run again without `{}` to see counterexamples)",
-                    self.bold.paint("-q")
+                    self.bold.paint("-v")
                 )
             }
         } else if step_res.has_falsifications() {
             println!(
-                "| - system {}, some PO(s) are {}",
+                "| - system {}, some candidate(s) are {}",
                 self.red.paint("might be unsafe"),
                 self.red.paint("not inductive"),
             );
             if self.env.verb == 0 {
                 println!(
                     "|   (run again without `{}` to see counterexamples)",
-                    self.bold.paint("-q")
+                    self.bold.paint("-v")
                 )
             }
         }
 
         if (base_res.has_falsifications() || step_res.has_falsifications())
-            && base_res
-                .okay
-                .iter()
-                .any(|b_ok_po| step_res.okay.iter().any(|s_ok_po| b_ok_po == s_ok_po))
+            && base_res.okay.iter().any(|b_ok_candidate| {
+                step_res
+                    .okay
+                    .iter()
+                    .any(|s_ok_candidate| b_ok_candidate == s_ok_candidate)
+            })
         {
             println!("|");
             println!(
-                "| - the following PO(s) {} in the initial state(s) and are {}",
+                "| - the following candidate(s) {} in the initial state(s) and are {}",
                 self.green.paint("hold"),
                 self.green.paint("inductive")
             );
@@ -162,8 +164,8 @@ impl<'env> Check<'env> {
                 self.green.paint("hold")
             );
 
-            for po in base_res.okay.intersection(&step_res.okay) {
-                println!("|   `{}`", self.green.paint(*po))
+            for candidate in base_res.okay.intersection(&step_res.okay) {
+                println!("|   `{}`", self.green.paint(*candidate))
             }
         }
 
@@ -185,7 +187,7 @@ impl<'env> Check<'env> {
         }
 
         println!(
-            "running {}, looking for falsifications for {} PO(s)...",
+            "running {}, looking for falsifications for {} candidate(s)...",
             self.bold.paint("BMC"),
             bmc_res.okay.len()
         );
@@ -215,15 +217,15 @@ impl<'env> Check<'env> {
             })?;
 
             if new_falsifications {
-                for (po, cex) in bmc.res().cexs.iter() {
-                    let is_new = falsified.insert(po.to_string());
+                for (candidate, cex) in bmc.res().cexs.iter() {
+                    let is_new = falsified.insert(candidate.to_string());
                     if is_new {
                         println!(
                             "found a {} at depth {}:",
                             self.red.paint("falsification"),
                             self.env.styles.bold.paint(&depth_str)
                         );
-                        self.present_cex(&self.sys, po, cex, true)?
+                        self.present_cex(&self.sys, candidate, cex, true)?
                     }
                 }
             }
@@ -238,11 +240,11 @@ impl<'env> Check<'env> {
         println!("|===| {} result", self.bold.paint("Bmc"));
         if !bmc_res.okay.is_empty() {
             println!(
-                "| - could {} find falsifications for the following PO(s)",
+                "| - could {} find falsifications for the following candidate(s)",
                 self.bold.paint("not")
             );
-            for po in &bmc_res.okay {
-                println!("|   `{}`", self.bold.paint(po as &str))
+            for candidate in &bmc_res.okay {
+                println!("|   `{}`", self.bold.paint(candidate as &str))
             }
         }
         if !bmc_res.okay.is_empty() && !bmc_res.cexs.is_empty() {
@@ -250,11 +252,11 @@ impl<'env> Check<'env> {
         }
         if !bmc_res.cexs.is_empty() {
             println!(
-                "| - found a {} for the following PO(s)",
+                "| - found a {} for the following candidate(s)",
                 self.red.paint("falsification")
             );
-            for po in bmc_res.cexs.keys() {
-                println!("|   `{}`", self.red.paint(*po))
+            for candidate in bmc_res.cexs.keys() {
+                println!("|   `{}`", self.red.paint(*candidate))
             }
         }
         println!("|");
@@ -263,10 +265,12 @@ impl<'env> Check<'env> {
         } else {
             println!("| - system {}", self.red.paint("might be unsafe"),);
             println!(
-                "|   no falsification in {} was found for some POs",
+                "|   no falsification in {} was found for some candidate(s)",
                 self.bold.paint(format!(
                     "{} step(s) or less",
-                    max.expect("[fatal] cannot have BMC with no max end with unfalsified POs"),
+                    max.expect(
+                        "[fatal] cannot have BMC with no max end with unfalsified candidates"
+                    ),
                 )),
             );
         }
@@ -287,14 +291,14 @@ impl<'env> Check<'env> {
         if self.env.verb > 0 {
             if !res.has_falsifications() {
                 println!(
-                    "{}: all PO(s) {} in the {} state",
+                    "{}: all candidate(s) {} in the {} state",
                     self.green.paint("success"),
                     self.green.paint("hold"),
                     self.under.paint("base"),
                 )
             } else {
                 println!(
-                    "{}: the following PO(s) {} in the {} state:",
+                    "{}: the following candidate(s) {} in the {} state:",
                     self.red.paint("failed"),
                     self.red.paint("do not hold"),
                     self.under.paint("step")
@@ -318,13 +322,13 @@ impl<'env> Check<'env> {
         if self.env.verb > 0 {
             if !res.has_falsifications() {
                 println!(
-                    "{}: all PO(s) are {}",
+                    "{}: all candidate(s) are {}",
                     self.green.paint("success"),
                     self.green.paint("inductive")
                 )
             } else {
                 println!(
-                    "{}: the following PO(s) are {}:",
+                    "{}: the following candidate(s) are {}:",
                     self.red.paint("failed"),
                     self.red.paint("not inductive"),
                 );
@@ -347,26 +351,28 @@ impl<'env> Check<'env> {
         res: &R,
         is_base: bool,
     ) -> Res<()> {
-        for (po, cex) in res.cexs.iter() {
-            self.present_cex(sys, *po, cex, is_base)?
+        for (candidate, cex) in res.cexs.iter() {
+            self.present_cex(sys, *candidate, cex, is_base)?
         }
         Ok(())
     }
     pub fn present_cex(
         &self,
         sys: &trans::Sys,
-        po: &str,
+        candidate: &str,
         cex: &check::cexs::Cex,
         is_base: bool,
     ) -> Res<()> {
         let max_id_len = sys.decls().max_id_len();
-        let def = sys
-            .po_s()
-            .get(po)
-            .ok_or_else(|| format!("failed to retrieve definition for PO `{}`", po))?;
+        let def = sys.po_s().get(candidate).ok_or_else(|| {
+            format!(
+                "failed to retrieve definition for candidate `{}`",
+                candidate,
+            )
+        })?;
         println!(
             "- `{}` = {}",
-            self.red.paint(po),
+            self.red.paint(candidate),
             self.bold.paint(format!("{}", def))
         );
         for (step, values) in &cex.trace {
