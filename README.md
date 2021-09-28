@@ -31,8 +31,7 @@ Use cargo to install mikino.
 > cargo install mikino
 ```
 
-That's it. Alternatively, you can [build it from source](#building-from-source) or retrieve a
-binary from the [release page] directly.
+That's it. Alternatively, you can [build it from source](#building-from-source).
 
 
 # Basics
@@ -63,7 +62,7 @@ you can download directly from the [Z3 release page]. You must either
 ```bash
 > cargo build --release
 > ./target/release/mikino --version
-mikino 0.1.0
+mikino 0.5.0
 ```
 
 
@@ -79,47 +78,53 @@ A (transition) system is composed of some variable declarations, of type `bool`,
 The definition of a system features an *initial predicate*. It is a boolean expression over the variables of the system that evaluate to true on the initial states of the system.
 
 > Assume now that we want to allow our counter's `cnt` variable's initial value to be anything as
-> long as it is positive. Our initial predicate will be `(≥ cnt 0)`. Note that variable `inc` is
+> long as it is positive. Our initial predicate will be `cnt ≥ 0`. Note that variable `inc` is
 > irrelevant in this predicate.
 
 Next, the *transition relation* of the system is an expression over two versions of the variables:
-the *current* variables, and the *next* variables. The transition relation is a relation between the
-current state and the next state that evaluates to true if the next state is a legal successor of
-the current one. A the *next* version of a variable `v` is simply written `v`, and its *current*
-version is written `(pre v)`.
+the *current* variables, and the *next* variables. The transition relation is a relation between
+the current state and the next state that evaluates to true if the next state is a legal successor
+of the current one. A the *next* version of a variable `v` is written `'v`, and its *current*
+version is just written `v`.
 
 > Our counter should increase by `1` whenever variable `inc` is true, and maintain its value
 > otherwise. There is several ways to write this, for instance
 >
-> ```
-> (or (and inc (= cnt (+ (pre cnt) 1))) (and (not inc) (= cnt (pre cnt))))
+> ```rust
+> (inc ⋀ 'cnt = cnt + 1) ⋁ (¬inc ⋀ 'cnt = cnt)
 > ```
 >
 > or
 >
+> ```rust
+> if inc { 'cnt = cnt + 1 } else { 'cnt = cnt }
 > ```
-> (ite     inc (= cnt (+ (pre cnt) 1))                 (= cnt (pre cnt)) )
-> ```
-
-Last, the transition system has a list of named Proof Obligations (POs) which are boolean
-expressions over the variables. The system is **safe** if and only if it is not possible to reach a
-falsification of any of those POs from the initial states by applying the transition relation
-repeatedly.
-
-> A reasonable PO for the counter system is `(≥ cnt 0)`. The system is safe for this PO as no
-> reachable state of the counter can falsify it.
 >
-> The PO `(not (= cnt 7))` does not hold in all reachable states, in fact the initial state `{ cnt:
-> 7, inc: _ }` falsifies it. But assume we change the initial predicate to be `(= cnt 0)`. Then the
-> PO is still falsifiable by applying the transition relation seven times to the (only) initial
-> state `{ cnt: 0, inc: _ }`. In all seven transitions, we need `inc` to be true so that `cnt` is
-> actually incremented.
+> or
+>
+> ```rust
+> 'cnt = if inc { cnt + 1 } else { cnt }
+> ```
 
-A falsification of a PO is a *concrete trace*: a sequence of states *i)* that starts from an initial
-state, *ii)* where successors are valid by the transition relation and *iii)* such that the last
-state of the sequence falsifies the PO.
+Last, the transition system has a list of named candidates (*candidate invariants*) which are
+boolean expressions over the variables. The system is **safe** if and only if it is not possible to
+reach a falsification of any of these candidates from the initial states by applying the transition
+relation repeatedly.
 
-> A falsification of `(not (= cnt 7))` for the last system above with the modified initial predicate
+> A reasonable candidate for the counter system is `(≥ cnt 0)`. The system is safe for this
+> candidate as no reachable state of the counter can falsify it.
+>
+> The candidate `¬(cnt = 7)` does not hold in all reachable states, in fact the initial state `{
+> cnt: 7, inc: _ }` falsifies it. But assume we change the initial predicate to be `cnt = 0`. Then
+> the candidate is still falsifiable by applying the transition relation seven times to the (only)
+> initial state `{ cnt: 0, inc: _ }`. In all seven transitions, we need `inc` to be true so that
+> `cnt` is actually incremented.
+
+A falsification of a candidate is a *concrete trace*: a sequence of states *i)* that starts from an
+initial state, *ii)* where successors are valid by the transition relation and *iii)* such that the
+last state of the sequence falsifies the PO.
+
+> A falsification of `¬(cnt = 7)` for the last system above with the modified initial predicate
 > is
 >
 > ```
@@ -156,9 +161,8 @@ Mikino relies on the following stellar libraries:
 - [`ansi_term`](https://crates.io/crates/ansi_term)
 - [`atty`](https://crates.io/crates/atty)
 - [`clap`](https://crates.io/crates/clap)
-- [`error-chain`](https://crates.io/crates/error-chain)
-- [`num`](https://crates.io/crates/num)
-- [`rsmt2`](https://crates.io/crates/rsmt2)
+- [`either`](https://crates.io/crates/either)
+- [`mikino_api`](https://crates.io/crates/mikino_api)
 
 
 # License
