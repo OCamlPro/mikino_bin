@@ -298,10 +298,10 @@ impl<'env> Check<'env> {
                 )
             } else {
                 println!(
-                    "{}: the following candidate(s) {} in the {} state:",
+                    "{}: the following candidate(s) {} in the {} state(s):",
                     self.red.paint("failed"),
                     self.red.paint("do not hold"),
-                    self.under.paint("step")
+                    self.under.paint("initial")
                 );
                 self.present_base_cexs(&self.sys, &res)?
             }
