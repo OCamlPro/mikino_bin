@@ -1,6 +1,6 @@
 [package]
 name = "mikino"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Adrien Champion <adrien.champion@ocamlpro.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
