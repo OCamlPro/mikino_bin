@@ -699,6 +699,13 @@ pub struct Styles {
     pub red: Style,
     /// Green style.
     pub green: Style,
+    /// Gray style.
+    pub gray: Style,
+
+    /// Italic.
+    pub ita: Style,
+    /// Code-style.
+    pub code: Style,
 }
 impl mikino_api::prelude::Style for Styles {
     type Styled = String;
@@ -714,6 +721,15 @@ impl mikino_api::prelude::Style for Styles {
     fn under(&self, s: &str) -> Self::Styled {
         self.under.paint(s).to_string()
     }
+    fn gray(&self, s: &str) -> Self::Styled {
+        self.gray.paint(s).to_string()
+    }
+    fn ita(&self, s: &str) -> Self::Styled {
+        self.ita.paint(s).to_string()
+    }
+    fn code(&self, s: &str) -> Self::Styled {
+        self.code.paint(s).to_string()
+    }
 }
 impl Styles {
     /// Constructor, with colors activated.
@@ -723,6 +739,9 @@ impl Styles {
             under: Style::new().underline(),
             red: Colour::Red.normal(),
             green: Colour::Green.normal(),
+            gray: Colour::Fixed(8).normal(),
+            ita: Style::new().italic(),
+            code: Colour::Yellow.normal(),
         }
     }
 
@@ -733,6 +752,9 @@ impl Styles {
             under: Style::new(),
             red: Style::new(),
             green: Style::new(),
+            gray: Style::new(),
+            ita: Style::new(),
+            code: Style::new(),
         }
     }
 
