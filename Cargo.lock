@@ -179,6 +179,8 @@ dependencies = [
 [[package]]
 name = "mikino_api"
 version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e3229c1f49dee3afc655eb0fec99b7aa021eaca2880b553c24bc057847c24e3"
 dependencies = [
  "either",
  "error-chain",
