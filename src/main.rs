@@ -52,7 +52,7 @@ impl Run {
     /// Constructor, handles CLAP.
     pub fn new() -> Self {
         use clap::*;
-        let app = clap::App::new("mikino")
+        let app = clap::Command::new("mikino")
             .version(crate_version!())
             .author(crate_authors!())
             .about(
@@ -60,26 +60,26 @@ impl Run {
                 See the `demo` subcommand if you are just starting out.",
             )
             .args(&[
-                Arg::with_name("NO_COLOR")
+                Arg::new("NO_COLOR")
                     .long("no_color")
                     .help("Deactivates colored output"),
-                Arg::with_name("VERB")
-                    .short("v")
-                    .multiple(true)
+                Arg::new("VERB")
+                    .short('v')
+                    .multiple_occurrences(true)
                     .help("Increases verbosity"),
-                Arg::with_name("Z3_CMD")
+                Arg::new("Z3_CMD")
                     .long("z3_cmd")
                     .takes_value(true)
                     .default_value("z3")
                     .help("specifies the command to run Z3"),
-                Arg::with_name("QUIET")
-                    .short("q")
+                Arg::new("QUIET")
+                    .short('q')
                     .help("Quiet output, only shows the final result (/!\\ hides counterexamples)"),
                 mode::cla::smt_log_arg(),
             ])
             .subcommands(mode::Mode::subcommands())
-            .setting(AppSettings::SubcommandRequiredElseHelp)
-            .setting(AppSettings::ColorAuto);
+            .subcommand_required(true)
+            .color(clap::ColorChoice::Auto);
 
         let matches = app.get_matches();
         let color = matches.occurrences_of("NO_COLOR") == 0;
@@ -309,7 +309,7 @@ pub fn run_script(
                 )
             }
             step => {
-                if let Some(pretty) = step.pretty(&script_content, &env.styles, true) {
+                if let Some(pretty) = step.pretty(&script_content, &env.styles, with_pos) {
                     println!("{}", pretty)
                 }
             }
