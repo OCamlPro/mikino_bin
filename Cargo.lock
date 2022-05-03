@@ -173,7 +173,6 @@ dependencies = [
  "ansi_term",
  "atty",
  "clap",
- "either",
  "mikino_api",
 ]
 
