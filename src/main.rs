@@ -2,7 +2,7 @@
 
 mikino_api::prelude!();
 
-use std::{collections::BTreeSet as Set, io::Write, ops::Deref};
+use std::{collections::BTreeSet as Set, io::Write, ops::Deref, path::PathBuf};
 
 use check::{BaseRes, CheckRes, StepRes};
 use trans::Sys;
@@ -31,6 +31,294 @@ pub struct PostRun<'sys> {
     pub step: StepRes<'sys>,
 }
 
+/// Run environment.
+pub struct Run {
+    /// Output styles (for coloring).
+    pub styles: Styles,
+    /// Verbosity.
+    pub verb: usize,
+    /// Z3 command.
+    pub z3_cmd: String,
+    /// Run mode.
+    pub mode: Mode,
+}
+impl Deref for Run {
+    type Target = Styles;
+    fn deref(&self) -> &Styles {
+        &self.styles
+    }
+}
+impl Run {
+    /// Constructor, handles CLAP.
+    pub fn new() -> Self {
+        use clap::*;
+        let app = clap::App::new("mikino")
+            .version(crate_version!())
+            .author(crate_authors!())
+            .about(
+                "A minimal induction engine for transition systems. \
+                See the `demo` subcommand if you are just starting out.",
+            )
+            .args(&[
+                Arg::with_name("NO_COLOR")
+                    .long("no_color")
+                    .help("Deactivates colored output"),
+                Arg::with_name("VERB")
+                    .short("v")
+                    .multiple(true)
+                    .help("Increases verbosity"),
+                Arg::with_name("Z3_CMD")
+                    .long("z3_cmd")
+                    .takes_value(true)
+                    .default_value("z3")
+                    .help("specifies the command to run Z3"),
+                Arg::with_name("QUIET")
+                    .short("q")
+                    .help("Quiet output, only shows the final result (/!\\ hides counterexamples)"),
+                mode::cla::smt_log_arg(),
+            ])
+            .subcommands(mode::Mode::subcommands())
+            .setting(AppSettings::SubcommandRequiredElseHelp)
+            .setting(AppSettings::ColorAuto);
+
+        let matches = app.get_matches();
+        let color = matches.occurrences_of("NO_COLOR") == 0;
+        let verb = ((matches.occurrences_of("VERB") + 1) % 4) as usize;
+        let quiet = matches.occurrences_of("QUIET") > 0;
+        let z3_cmd = matches
+            .value_of("Z3_CMD")
+            .expect("argument with default value")
+            .into();
+        let smt_log = mode::cla::get_smt_log(&matches);
+        let verb = if quiet {
+            0
+        } else if verb > 4 {
+            4
+        } else {
+            verb
+        };
+
+        let mode =
+            mode::Mode::from_clap(smt_log, &matches).expect("[clap] could not recognize mode");
+
+        Self {
+            styles: Styles::new(color),
+            verb,
+            z3_cmd,
+            mode,
+        }
+    }
+
+    /// Launches whatever the user told us to do.
+    pub fn launch(&self) {
+        if let Err(e) = self.run() {
+            println!("|===| {}", self.red.paint("Error"));
+            for (e_idx, e) in e.into_iter().enumerate() {
+                for (l_idx, line) in e.pretty(&self.styles).lines().enumerate() {
+                    let pref = if e_idx == 0 {
+                        "| "
+                    } else if l_idx == 0 {
+                        "| - "
+                    } else {
+                        "|   "
+                    };
+                    println!("{}{}", pref, line);
+                }
+            }
+            println!("|===|");
+        }
+    }
+
+    /// Runs the mode.
+    pub fn run(&self) -> Res<()> {
+        match &self.mode {
+            Mode::Check {
+                input,
+                smt_log,
+                induction,
+                bmc,
+                bmc_max,
+            } => {
+                if let Some(smt_log) = smt_log {
+                    if !std::path::Path::new(smt_log).exists() {
+                        std::fs::create_dir_all(smt_log).chain_err(|| {
+                            format!("while recursively creating SMT log directory `{}`", smt_log)
+                        })?
+                    }
+                }
+                let check = Check::new(self, input, smt_log)?;
+                let (base, step) = if *induction {
+                    let (base, step) = check.run()?;
+                    (base, Some(step))
+                } else {
+                    (CheckRes::new(&check.sys).into(), None)
+                };
+                if *bmc {
+                    if *induction {
+                        println!();
+                    }
+                    check.bmc(bmc_max.clone(), &base, step.as_ref())?
+                }
+                Ok(())
+            }
+            Mode::Script {
+                input,
+                smt_log,
+                verb,
+            } => {
+                if let Some(smt_log) = smt_log {
+                    if !std::path::Path::new(smt_log).exists() {
+                        std::fs::create_dir_all(smt_log).chain_err(|| {
+                            format!("while recursively creating SMT log directory `{}`", smt_log)
+                        })?
+                    }
+                }
+
+                run_script(self, input, smt_log, *verb)
+                    .chain_err(|| format!("running `{}` script", self.styles.bold.paint(input)))
+            }
+            Mode::Demo { target, check } => self.write_demo(target, *check),
+            Mode::Parse { input } => {
+                let _check = Check::new(self, input, &None)?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Writes the demo system file somewhere.
+    ///
+    /// If `!check`, generates the demo script instead.
+    pub fn write_demo(&self, target: &str, check: bool) -> Res<()> {
+        use std::fs::OpenOptions;
+        let (desc, demo) = if check {
+            ("system", mikino_api::TRANS_DEMO.as_bytes())
+        } else {
+            ("script", mikino_api::SCRIPT_DEMO.as_bytes())
+        };
+        println!(
+            "writing demo {} to file `{}`",
+            desc,
+            self.bold.paint(target)
+        );
+        let mut file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(target)
+            .chain_err(|| format!("while opening file `{}` in write mode", target))?;
+        file.write(demo)
+            .chain_err(|| format!("while writing demo {} to file `{}`", desc, target))?;
+        file.flush()
+            .chain_err(|| format!("while writing demo {} to file `{}`", desc, target))?;
+        Ok(())
+    }
+}
+
+/// Runs a script.
+pub fn run_script(
+    env: &Run,
+    script_path: impl AsRef<std::path::Path>,
+    smt_log_dir: &Option<String>,
+    verb: usize,
+) -> Res<()> {
+    let with_pos = verb > 0;
+    let script_path = script_path.as_ref();
+    let script_content = {
+        use std::{fs::OpenOptions, io::Read};
+        let mut file = OpenOptions::new()
+            .read(true)
+            .open(script_path)
+            .chain_err(|| {
+                format!(
+                    "loading file `{}`",
+                    env.bold.paint(script_path.display().to_string())
+                )
+            })?;
+
+        let mut content = String::new();
+        file.read_to_string(&mut content).chain_err(|| {
+            format!(
+                "reading file `{}`",
+                env.bold.paint(script_path.display().to_string())
+            )
+        })?;
+        content
+    };
+
+    let ast = parse::script(&script_content).chain_err(|| {
+        format!(
+            "parsing (1) file `{}`",
+            env.bold.paint(script_path.display().to_string())
+        )
+    })?;
+    let script = script::build::doit(ast)
+        .map_err(|e| {
+            let span = e.span;
+            let (prev, row, col, line, next) = span.pretty_of(&script_content);
+            Error::parse("", row, col, line, prev, next).extend(e.error.into_iter())
+        })
+        .chain_err(|| {
+            format!(
+                "parsing (2) file `{}`",
+                env.bold.paint(script_path.display().to_string())
+            )
+        })?;
+    if env.verb >= 3 {
+        println!("parsing {}", env.styles.green.paint("successful"));
+    }
+
+    let mut runner = {
+        let conf = SmtConf::z3(&env.z3_cmd);
+        let tee = smt_log_dir.as_ref().map(|s| {
+            let mut path = PathBuf::from(s);
+            path.push("script.smt2");
+            path
+        });
+        mikino_api::script::Script::new(conf, tee, &script, &script_content).chain_err(|| {
+            format!(
+                "building script runner for file `{}`",
+                env.bold.paint(script_path.display().to_string())
+            )
+        })?
+    };
+
+    'step: loop {
+        use mikino_api::script::{Outcome, Step};
+        match runner.step().chain_err(|| {
+            format!(
+                "performing script step for file `{}`",
+                env.bold.paint(script_path.display().to_string())
+            )
+        })? {
+            Step::Done(Outcome::Exit(_span_opt, code)) => {
+                println!(
+                    "{}",
+                    Outcome::Exit(_span_opt, code).pretty(&script_content, &env.styles, with_pos)
+                );
+                if code != 0 {
+                    std::process::exit(code as i32)
+                } else {
+                    break 'step;
+                }
+            }
+            Step::Done(outcome @ Outcome::Panic { .. }) => {
+                eprintln!("{}", outcome.pretty(&script_content, &env.styles, with_pos));
+                bail!(
+                    "script `{}` panicked",
+                    env.bold.paint(script_path.display().to_string())
+                )
+            }
+            step => {
+                if let Some(pretty) = step.pretty(&script_content, &env.styles, true) {
+                    println!("{}", pretty)
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Check environment.
 pub struct Check<'env> {
     /// Run env.
@@ -57,7 +345,7 @@ impl<'env> Check<'env> {
         let mut txt = String::new();
         file.read_to_string(&mut txt)?;
 
-        let sys = parse::sys(&txt)?;
+        let sys = parse::trans(&txt)?;
         if env.verb >= 3 {
             println!("|===| Parsing {}:", env.styles.green.paint("successful"));
             for line in sys.to_ml_string().lines() {
@@ -192,12 +480,9 @@ impl<'env> Check<'env> {
             bmc_res.okay.len()
         );
 
-        let mut bmc = check::Bmc::new(
-            &self.sys,
-            &self.env.z3_cmd,
-            self.smt_log_dir.as_ref(),
-            bmc_res,
-        )?;
+        let conf = SmtConf::z3(&self.env.z3_cmd);
+        let tee = self.smt_log_dir.as_ref().map(std::path::PathBuf::from);
+        let mut bmc = check::Bmc::new(&self.sys, conf, tee, bmc_res)?;
         let mut falsified = Set::new();
 
         while !bmc.is_done() && max.map(|max| max >= bmc.next_check_step()).unwrap_or(true) {
@@ -284,9 +569,10 @@ impl<'env> Check<'env> {
         if self.env.verb > 0 {
             println!("checking {} case...", self.under.paint("base"))
         }
+        let conf = SmtConf::z3(&self.env.z3_cmd);
+        let tee = self.smt_log_dir.as_ref().map(std::path::PathBuf::from);
         let mut base_checker =
-            check::Base::new(&self.sys, &self.env.z3_cmd, self.smt_log_dir.as_ref())
-                .chain_err(|| "during base checker creation")?;
+            check::Base::new(&self.sys, conf, tee).chain_err(|| "during base checker creation")?;
         let res = base_checker.check().chain_err(|| "during base check")?;
         if self.env.verb > 0 {
             if !res.has_falsifications() {
@@ -315,9 +601,10 @@ impl<'env> Check<'env> {
         if self.env.verb > 0 {
             println!("checking {} case...", self.under.paint("step"))
         }
+        let conf = SmtConf::z3(&self.env.z3_cmd);
+        let tee = self.smt_log_dir.as_ref().map(std::path::PathBuf::from);
         let mut step_checker =
-            check::Step::new(&self.sys, &self.env.z3_cmd, self.smt_log_dir.as_ref())
-                .chain_err(|| "during step checker creation")?;
+            check::Step::new(&self.sys, conf, tee).chain_err(|| "during step checker creation")?;
         let res = step_checker.check().chain_err(|| "during step check")?;
         if self.env.verb > 0 {
             if !res.has_falsifications() {
@@ -398,180 +685,6 @@ impl<'env> Check<'env> {
             }
         }
         println!("  |=|");
-        Ok(())
-    }
-}
-
-/// Returns an error if the input string is not a valid integer.
-///
-/// Used by CLAP.
-pub fn validate_int(s: String) -> Result<(), String> {
-    macro_rules! abort {
-        () => {
-            return Err(format!("expected integer, found `{}`", s));
-        };
-    }
-    if s != "0" {
-        for (idx, char) in s.chars().enumerate() {
-            if idx == 0 {
-                if !char.is_numeric() || char == '0' {
-                    abort!()
-                }
-            } else {
-                if !char.is_numeric() {
-                    abort!()
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Run environment.
-pub struct Run {
-    /// Output styles (for coloring).
-    pub styles: Styles,
-    /// Verbosity.
-    pub verb: usize,
-    /// Z3 command.
-    pub z3_cmd: String,
-    /// Run mode.
-    pub mode: Mode,
-}
-impl Deref for Run {
-    type Target = Styles;
-    fn deref(&self) -> &Styles {
-        &self.styles
-    }
-}
-impl Run {
-    /// Constructor, handles CLAP.
-    pub fn new() -> Self {
-        use clap::*;
-        let app = clap::App::new("mikino")
-            .version(crate_version!())
-            .author(crate_authors!())
-            .about(
-                "A minimal induction engine for transition systems. \
-                See the `demo` subcommand if you are just starting out.",
-            )
-            .args(&[
-                Arg::with_name("NO_COLOR")
-                    .long("no_color")
-                    .help("Deactivates colored output"),
-                Arg::with_name("VERB")
-                    .short("v")
-                    .multiple(true)
-                    .help("Increases verbosity"),
-                Arg::with_name("Z3_CMD")
-                    .long("z3_cmd")
-                    .takes_value(true)
-                    .default_value("z3")
-                    .help("specifies the command to run Z3"),
-                Arg::with_name("QUIET")
-                    .short("q")
-                    .help("Quiet output, only shows the final result (/!\\ hides counterexamples)"),
-                mode::cla::smt_log_arg(),
-            ])
-            .subcommands(mode::Mode::subcommands())
-            .setting(AppSettings::SubcommandRequiredElseHelp)
-            .setting(AppSettings::ColorAuto);
-
-        let matches = app.get_matches();
-        let color = matches.occurrences_of("NO_COLOR") == 0;
-        let verb = ((matches.occurrences_of("VERB") + 1) % 4) as usize;
-        let quiet = matches.occurrences_of("QUIET") > 0;
-        let z3_cmd = matches
-            .value_of("Z3_CMD")
-            .expect("argument with default value")
-            .into();
-        let smt_log = mode::cla::get_smt_log(&matches);
-        let verb = if quiet {
-            0
-        } else if verb > 4 {
-            4
-        } else {
-            verb
-        };
-
-        let mode =
-            mode::Mode::from_clap(smt_log, &matches).expect("[clap] could not recognize mode");
-
-        Self {
-            styles: Styles::new(color),
-            verb,
-            z3_cmd,
-            mode,
-        }
-    }
-
-    /// Launches whatever the user told us to do.
-    pub fn launch(&self) {
-        if let Err(e) = self.run() {
-            println!("|===| {}", self.red.paint("Error"));
-            for e in e.into_iter() {
-                for line in e.pretty(&self.styles).lines() {
-                    println!("| {}", line);
-                }
-            }
-            println!("|===|");
-        }
-    }
-
-    /// Runs the mode.
-    pub fn run(&self) -> Res<()> {
-        match &self.mode {
-            Mode::Check {
-                input,
-                smt_log,
-                induction,
-                bmc,
-                bmc_max,
-            } => {
-                if let Some(smt_log) = smt_log {
-                    if !std::path::Path::new(smt_log).exists() {
-                        std::fs::create_dir_all(smt_log).chain_err(|| {
-                            format!("while recursively creating SMT log directory `{}`", smt_log)
-                        })?
-                    }
-                }
-                let check = Check::new(self, input, smt_log)?;
-                let (base, step) = if *induction {
-                    let (base, step) = check.run()?;
-                    (base, Some(step))
-                } else {
-                    (CheckRes::new(&check.sys).into(), None)
-                };
-                if *bmc {
-                    if *induction {
-                        println!();
-                    }
-                    check.bmc(bmc_max.clone(), &base, step.as_ref())?
-                }
-                Ok(())
-            }
-            Mode::Demo { target } => self.write_demo(target),
-            Mode::Parse { input } => {
-                let _check = Check::new(self, input, &None)?;
-                Ok(())
-            }
-        }
-    }
-
-    /// Writes the demo file somewhere.
-    pub fn write_demo(&self, target: &str) -> Res<()> {
-        use std::fs::OpenOptions;
-        println!("writing demo system to file `{}`", self.bold.paint(target));
-        let mut file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(target)
-            .chain_err(|| format!("while opening file `{}` in write mode", target))?;
-        file.write(mikino_api::DEMO.as_bytes())
-            .chain_err(|| format!("while writing demo system to file `{}`", target))?;
-        file.flush()
-            .chain_err(|| format!("while writing demo system to file `{}`", target))?;
         Ok(())
     }
 }

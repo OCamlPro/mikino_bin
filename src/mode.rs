@@ -15,8 +15,14 @@ pub enum Mode {
         bmc: bool,
         bmc_max: Option<usize>,
     },
-    /// Demo mode, generate a demo system to `target`.
-    Demo { target: String },
+    /// Script mode, run user's script.
+    Script {
+        input: String,
+        smt_log: Option<String>,
+        verb: usize,
+    },
+    /// Demo mode, generate a demo system to `target` if `check`, otherwise generates a demo script.
+    Demo { check: bool, target: String },
     /// Parse mode, does nothing but parse the system.
     Parse { input: String },
 }
@@ -26,7 +32,8 @@ impl Mode {
     pub fn subcommands() -> Vec<App> {
         vec![
             cla::check_subcommand(),
-            cla::demo_subcommand(),
+            cla::script_subcommand(),
+            cla::demo(),
             cla::bmc_subcommand(),
             cla::parse_subcommand(),
         ]
@@ -34,7 +41,13 @@ impl Mode {
 
     /// Builds itself from top-level clap matches.
     pub fn from_clap(smt_log: Option<String>, matches: &Matches) -> Option<Mode> {
-        let modes = [cla::try_check, cla::try_bmc, cla::try_demo, cla::try_parse];
+        let modes = [
+            cla::try_check,
+            cla::try_script,
+            cla::try_bmc,
+            cla::try_demo,
+            cla::try_parse,
+        ];
         for try_mode in &modes {
             let maybe_res = try_mode(smt_log.clone(), matches);
             if maybe_res.is_some() {
@@ -51,6 +64,7 @@ pub mod cla {
 
     pub mod mode {
         pub const CHECK: &str = "check";
+        pub const SCRIPT: &str = "script";
         pub const DEMO: &str = "demo";
         pub const BMC: &str = "bmc";
         pub const PARSE: &str = "parse";
@@ -61,6 +75,9 @@ pub mod cla {
         pub const BMC_MAX_KEY: &str = "BMC_MAX";
         pub const SMT_LOG_KEY: &str = "SMT_LOG";
         pub const SYS_KEY: &str = "SYS_KEY";
+        pub const SCRIPT_KEY: &str = "SCRIPT_KEY";
+        pub const SCRIPT_VERBOSE_KEY: &str = "SCRIPT_VERBOSE";
+        pub const DEMO_SCRIPT_KEY: &str = "DEMO_SCRIPT";
         pub const DEMO_TGT_KEY: &str = "DEMO_TGT";
     }
 
@@ -96,14 +113,27 @@ pub mod cla {
 
     fn sys_arg() -> Arg {
         Arg::with_name(arg::SYS_KEY)
-            .help("Transition system to analyze (run in demo mode for details)")
+            .help("Transition system to analyze (run `mikino demo -h` mode for details)")
             .required(true)
             .value_name("FILE")
     }
     fn get_sys(matches: &Matches) -> String {
         matches
             .value_of(arg::SYS_KEY)
-            .expect("[clap] required argument cannot be absent")
+            .expect("[clap] required system argument cannot be absent")
+            .into()
+    }
+
+    fn script_arg() -> Arg {
+        Arg::with_name(arg::SCRIPT_KEY)
+            .help("Hsmt script to run (run `mikino demo -h` mode for details)")
+            .required(true)
+            .value_name("FILE")
+    }
+    fn get_script(matches: &Matches) -> String {
+        matches
+            .value_of(arg::SCRIPT_KEY)
+            .expect("[clap] required script argument cannot be absent")
             .into()
     }
 
@@ -141,19 +171,53 @@ pub mod cla {
         })
     }
 
+    /// Subcommand for the check mode.
+    pub fn script_subcommand() -> App {
+        SubCommand::with_name(mode::SCRIPT)
+            .about("Runs a hsmt script")
+            .args(&[
+                script_arg(),
+                smt_log_arg(),
+                Arg::with_name(arg::SCRIPT_VERBOSE_KEY)
+                    .short("v")
+                    .long("verbose")
+                    .multiple(true)
+                    .help("increases script output verbosity"),
+            ])
+    }
+    pub fn try_script(smt_log: Option<String>, matches: &Matches) -> Option<Mode> {
+        let matches = matches.subcommand_matches(mode::SCRIPT)?;
+
+        let input = get_script(matches);
+        let smt_log = get_smt_log(matches).or(smt_log);
+        let verb = matches.occurrences_of(arg::SCRIPT_VERBOSE_KEY) as usize;
+        println!("verb: {}", verb);
+
+        Some(Mode::Script {
+            input,
+            smt_log,
+            verb,
+        })
+    }
+
     /// Subcommand for the demo mode.
-    pub fn demo_subcommand() -> App {
+    pub fn demo() -> App {
         SubCommand::with_name(mode::DEMO)
             .about(
                 "Generates a demo transition system file, \
                 recommended if you are just starting out. \
-                /!\\ OVERWRITES the target file.",
+                /!\\ OVERWRITES the target file.\n\n\
+                Use `--script` to generate a demo script instead.",
             )
-            .arg(
+            .args(&[
+                Arg::with_name(arg::DEMO_SCRIPT_KEY)
+                    .short("s")
+                    .long("script")
+                    .help("generate a demo **script**"),
                 Arg::with_name(arg::DEMO_TGT_KEY)
                     .help("Path of the file to write the demo file to")
                     .required(true),
-            )
+            ])
     }
     pub fn try_demo(_smt_log: Option<String>, matches: &Matches) -> Option<Mode> {
         let matches = matches.subcommand_matches(mode::DEMO)?;
@@ -161,7 +225,9 @@ pub mod cla {
             .value_of(arg::DEMO_TGT_KEY)
             .expect("[clap]: required argument cannot be absent")
             .into();
-        Some(Mode::Demo { target })
+        let check = matches.occurrences_of(arg::DEMO_SCRIPT_KEY) == 0;
+
+        Some(Mode::Demo { target, check })
     }
 
     /// Subcommand for the bmc mode.
@@ -207,18 +273,18 @@ pub mod cla {
     pub fn validate_int(s: String) -> Result<(), String> {
         macro_rules! abort {
             () => {
-                return Err(format!("expected integer, found `{}`", s));
+                return Err(format!("expected integer, found `{}`", s))
             };
         }
         if s != "0" {
             for (idx, char) in s.chars().enumerate() {
                 if idx == 0 {
                     if !char.is_numeric() || char == '0' {
-                        abort!()
+                        abort!();
                     }
                 } else {
                     if !char.is_numeric() {
-                        abort!()
+                        abort!();
                     }
                 }
             }
