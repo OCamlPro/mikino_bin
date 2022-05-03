@@ -1,11 +1,18 @@
 Mikino is a (relatively) simple induction and BMC engine. Its goal is to serve as a simple yet
-interesting tool for those interested in formal verification, especially SMT-based induction.
+interesting tool for those interested in formal verification, especially SMT-based induction. For
+instance, mikino as an input language much easier to get into than SMT-LIB 2 (the SMT solver input
+language standard). Also, we took great care in making its output as readable and easy to
+understand as possible.
+
+![crates.io](https://img.shields.io/crates/v/mikino_api.svg)
+
+Mikino comes with [a tutorial on SMT, induction (and strengthening)][dummies]. Definitely read it
+if you're new to either of these topics, or just take a look at the examples throughout to get a
+taste of mikino.
 
 > *"Mikino"* does **not** mean *cinema*. It is a contraction of *"mini"* and *"kinō"* (帰納:
 > induction, recursion). It is a significantly simpler version of the now defunct [kino]
 > `k`-induction engine on transition systems.
-
-![crates.io](https://img.shields.io/crates/v/mikino.svg)
 
 Contents:
 - [Installing](#installing)
@@ -13,6 +20,7 @@ Contents:
 - [SMT Solver (Z3)](#smt-solver-z3)
 - [Building From Source](#building-from-source)
 - [Transition Systems](#transition-systems)
+- [Scripts](#scripts)
 - [Dependencies](#dependencies)
 - [License](#license)
 
@@ -32,6 +40,11 @@ Use cargo to install mikino.
 ```
 
 That's it. Alternatively, you can [build it from source](#building-from-source).
+
+```bash
+> mikino -V
+mikino 0.9.0
+```
 
 
 # Basics
@@ -62,7 +75,7 @@ you can download directly from the [Z3 release page]. You must either
 ```bash
 > cargo build --release
 > ./target/release/mikino --version
-mikino 0.5.0
+mikino 0.9.0
 ```
 
 
@@ -154,6 +167,13 @@ last state of the sequence falsifies the PO.
 > ```
 
 
+# Scripts
+
+Mikino also has a `script` mode which runs scripts in Rust-flavored SMT-LIB 2. The syntax is very
+similar to that of transition system, check out the demo by running `mikino demo --script
+demo_script.rs`.
+
+
 # Dependencies
 
 Mikino relies on the following stellar libraries:
@@ -161,8 +181,15 @@ Mikino relies on the following stellar libraries:
 - [`ansi_term`](https://crates.io/crates/ansi_term)
 - [`atty`](https://crates.io/crates/atty)
 - [`clap`](https://crates.io/crates/clap)
-- [`either`](https://crates.io/crates/either)
 - [`mikino_api`](https://crates.io/crates/mikino_api)
+
+- [`either`](https://crates.io/crates/either)
+- [`error-chain`](https://crates.io/crates/error-chain)
+- [`lazy_static`](https://crates.io/crates/lazy_static)
+- [`num`](https://crates.io/crates/num)
+- [`peg`](https://crates.io/crates/peg)
+- [`readonly`](https://crates.io/crates/readonly)
+- [`rsmt2`](https://crates.io/crates/rsmt2)
 
 
 # License
@@ -189,3 +216,5 @@ Copyright © OCamlPro SAS
 (MIT license on github)
 [release page]: https://github.com/OCamlPro/mikino_bin/releases
 (Mikino's release page on github)
+[dummies]: https://ocamlpro.com/blog/2021_10_14_verification_for_dummies_smt_and_induction
+(Induction for Dummies: SMT and Induction)
