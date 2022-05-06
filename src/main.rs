@@ -268,7 +268,7 @@ pub fn run_script(
     }
 
     let mut runner = {
-        let conf = SmtConf::z3(&env.z3_cmd);
+        let conf = z3_cmd_to_conf(&env.z3_cmd)?;
         let tee = smt_log_dir.as_ref().map(|s| {
             let mut path = PathBuf::from(s);
             path.push("script.smt2");
@@ -480,7 +480,7 @@ impl<'env> Check<'env> {
             bmc_res.okay.len()
         );
 
-        let conf = SmtConf::z3(&self.env.z3_cmd);
+        let conf = z3_cmd_to_conf(&self.env.z3_cmd)?;
         let tee = self.smt_log_dir.as_ref().map(std::path::PathBuf::from);
         let mut bmc = check::Bmc::new(&self.sys, conf, tee, bmc_res)?;
         let mut falsified = Set::new();
@@ -569,7 +569,7 @@ impl<'env> Check<'env> {
         if self.env.verb > 0 {
             println!("checking {} case...", self.under.paint("base"))
         }
-        let conf = SmtConf::z3(&self.env.z3_cmd);
+        let conf = z3_cmd_to_conf(&self.env.z3_cmd)?;
         let tee = self.smt_log_dir.as_ref().map(std::path::PathBuf::from);
         let mut base_checker =
             check::Base::new(&self.sys, conf, tee).chain_err(|| "during base checker creation")?;
@@ -601,7 +601,7 @@ impl<'env> Check<'env> {
         if self.env.verb > 0 {
             println!("checking {} case...", self.under.paint("step"))
         }
-        let conf = SmtConf::z3(&self.env.z3_cmd);
+        let conf = z3_cmd_to_conf(&self.env.z3_cmd)?;
         let tee = self.smt_log_dir.as_ref().map(std::path::PathBuf::from);
         let mut step_checker =
             check::Step::new(&self.sys, conf, tee).chain_err(|| "during step checker creation")?;

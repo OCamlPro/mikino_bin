@@ -1,3 +1,8 @@
+# v0.9.1
+
+- bumped to `mikino_api` v0.9.1
+- fixed parser bug on `and` and `or`
+
 # v0.9.0
 
 - added a notion of script
