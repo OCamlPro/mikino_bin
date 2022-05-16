@@ -778,6 +778,9 @@ impl Styles {
             under: Style::new(),
             red: Style::new(),
             green: Style::new(),
+            gray: Style::new(),
+            ita: Style::new(),
+            code: Style::new(),
         }
     }
 }
