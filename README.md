@@ -203,7 +203,7 @@ Generate and run demo script. All lines starting with `//` in the output are `ec
 
 ![script demo](rsc/screenshots/script.png)
 
-Generate and run demo transition system:
+Generate and run the demo transition system:
 
 ![trans demo](rsc/screenshots/trans.png)
 
