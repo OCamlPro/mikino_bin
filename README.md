@@ -22,6 +22,7 @@ Contents:
 - [Transition Systems](#transition-systems)
 - [Scripts](#scripts)
 - [Dependencies](#dependencies)
+- [Gallery](#gallery)
 - [License](#license)
 
 
@@ -190,6 +191,21 @@ Mikino relies on the following stellar libraries:
 - [`peg`](https://crates.io/crates/peg)
 - [`readonly`](https://crates.io/crates/readonly)
 - [`rsmt2`](https://crates.io/crates/rsmt2)
+
+
+# Gallery
+
+Generate and run demo script:
+
+![script demo](rsc/screenshots/script.png)
+
+Generate and run demo transition system:
+
+![trans demo](rsc/screenshots/trans.png)
+
+Run on a modified (unsafe) version of the demo system:
+
+![trans cex demo](rsc/screenshots/trans_cex.png)
 
 
 # License
