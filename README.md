@@ -1,14 +1,14 @@
 Mikino is a (relatively) simple induction and BMC engine. Its goal is to serve as a simple yet
 interesting tool for those interested in formal verification, especially SMT-based induction. For
 instance, mikino as an input language much easier to get into than SMT-LIB 2 (the SMT solver input
-language standard). Also, we took great care in making its output as readable and easy to
-understand as possible.
+language standard). Also, we took great care in making its output as readable and easy to understand
+as possible.
 
 ![crates.io](https://img.shields.io/crates/v/mikino_api.svg)
 
-Mikino comes with [a tutorial on SMT, induction (and strengthening)][dummies]. Definitely read it
-if you're new to either of these topics, or just take a look at the examples throughout to get a
-taste of mikino.
+Mikino comes with [a tutorial on SMT, induction (and strengthening)][dummies]. Definitely read it if
+you're new to either of these topics, or just take a look at the examples throughout to get a taste
+of mikino. See the [gallery](#gallery) for screenshots of mikino's awesome output.
 
 > *"Mikino"* does **not** mean *cinema*. It is a contraction of *"mini"* and *"kinō"* (帰納:
 > induction, recursion). It is a significantly simpler version of the now defunct [kino]
@@ -22,6 +22,7 @@ Contents:
 - [Transition Systems](#transition-systems)
 - [Scripts](#scripts)
 - [Dependencies](#dependencies)
+- [Gallery](#gallery)
 - [License](#license)
 
 
@@ -80,6 +81,8 @@ mikino 0.9.0
 
 
 # Transition Systems
+
+> See the [gallery](#gallery) for screenshots of mikino's awesome output.
 
 A (transition) system is composed of some variable declarations, of type `bool`, `int` or `rat`
 (rational). A valuation of these variables is usually called a *state*. (An `int` is a
@@ -169,6 +172,8 @@ last state of the sequence falsifies the PO.
 
 # Scripts
 
+> See the [gallery](#gallery) for screenshots of mikino's awesome output.
+
 Mikino also has a `script` mode which runs scripts in Rust-flavored SMT-LIB 2. The syntax is very
 similar to that of transition system, check out the demo by running `mikino demo --script
 demo_script.rs`.
@@ -190,6 +195,21 @@ Mikino relies on the following stellar libraries:
 - [`peg`](https://crates.io/crates/peg)
 - [`readonly`](https://crates.io/crates/readonly)
 - [`rsmt2`](https://crates.io/crates/rsmt2)
+
+
+# Gallery
+
+Generate and run demo script. All lines starting with `//` in the output are `echo!`-s from the script:
+
+![script demo](rsc/screenshots/script.png)
+
+Generate and run the demo transition system:
+
+![trans demo](rsc/screenshots/trans.png)
+
+Run on a modified (unsafe) version of the demo system:
+
+![trans cex demo](rsc/screenshots/trans_cex.png)
 
 
 # License
